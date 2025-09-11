@@ -43,10 +43,32 @@ entwine_pointcloud/
 
 ## ▶️ Como rodar
 
-Suba o container com:
+Caso a instalação das bibliotecas não funcione, você pode criar um ambiente virtual e instalar manualmente com:
 
 ```bash
-docker-compose up
+python -m venv venv
+source venv/bin/activate   # Linux/Mac
+venv\Scripts\activate    # Windows
+
+pip install py3dtiles laszip laspy pyproj numpy
+```
+
+Em seguida, entre na pasta `tiling`:
+
+```bash
+cd tiling
+```
+
+E rode o script para gerar o dataset **3D Tiles**:
+
+```bash
+python main.py
+```
+
+Com o dataset criado, suba o container com:
+
+```bash
+docker-compose up --build
 ```
 
 A aplicação ficará disponível em:
@@ -62,6 +84,11 @@ A aplicação é servida via **porta 8080**.
 ---
 
 ## 📝 Observações
+
+- O container já expõe a pasta do projeto local para dentro do ambiente do Docker.  
+- Sempre que fizer alterações em `index.html`, `style.css` ou `script.js`, basta atualizar a página no navegador.  
+- Caso não veja a mudança, faça um **hard reload** (`Ctrl + Shift + R` ou `Ctrl + F5`).  
+
 
 - O container já expõe a pasta do projeto local para dentro do ambiente do Docker.  
 - Sempre que fizer alterações em `index.html`, `style.css` ou `script.js`, basta atualizar a página no navegador.  
