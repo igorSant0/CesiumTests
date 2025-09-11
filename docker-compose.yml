@@ -3,7 +3,7 @@ version: "3.8"
 services:
     cesium-viewer:
         image: python:3.9-alpine
-        container_name: cesium-viewer
+        container_name: cesium
         ports:
             - "8080:8000"
         volumes:

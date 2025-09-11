@@ -38,7 +38,7 @@ async function carregarTileset() {
     try {
         // As opções que estavam no construtor agora são passadas para 'fromUrl'
         const tilesetOptions = {
-            url: "http://localhost:8080/3dTiles_bkp/tileset.json",
+            url: "http://localhost:8080/3dtiles/tileset.json",
             debugShowBoundingVolume: false,
             debugShowContentBoundingVolume: false,
             maximumScreenSpaceError: 64,
@@ -61,7 +61,7 @@ async function carregarTileset() {
         };
 
         // 1. Carregamos o tileset com 'await' e esperamos ele ficar pronto
-        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8080/3dTiles_bkp/tileset.json");
+        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8080/3dtiles/tileset.json");
 
         // 2. Adicionamos o tileset já carregado à cena
         viewer.scene.primitives.add(tileset);
