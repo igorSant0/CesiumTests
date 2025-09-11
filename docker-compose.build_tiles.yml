@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  tile-builder:
+    build:
+      context: ./tiling
+    image: tile-builder:latest
+    volumes:
+      - ${TILES_PATH}:/3dTiles
+      - ${ASSETS_PATH}:/assets
+      - ./tiling:/app
+    command: python main.py

@@ -11,64 +11,27 @@ Antes de começar, certifique-se de ter instalado:
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
-Além disso, o ambiente utiliza as seguintes bibliotecas Python sendo instaladas usando `pip install`:
-
-- [py3dtiles](https://github.com/Oslandia/py3dtiles)
-- [laspy[laszip]](https://github.com/laspy/laspy) _(necessário para suportar arquivos LAZ)_
-- [pyproj](https://pyproj4.github.io/pyproj/stable/)
-- [numpy](https://numpy.org/)
-
 ---
 
 ## 📂 Organização dos dados
 
-Após clonar este repositório, é necessário **copiar manualmente** a pasta `entwine_pointcloud` para dentro da pasta.
+ASSETS_PATH=/home/ralph/Documentos/agrosmart/media/orthomosaic/0/0/0/assets/entwine_pointcloud
+TILES_PATH=/home/ralph/Documentos/agrosmart/media/orthomosaic/0/0/0/assets/3dTiles
 
-A pasta `entwine_pointcloud` pode ser encontrada em:
+`/home/ralph/Documentos/agrosmart/media/orthomosaic/0/0/0/assets` é a pasta do agrosmart onde estão os assets, é só jogar a `entwine_pointcloud` na env do `ASSETS_PATH` que vai dar certo
+o `TILES_PATH` tb mapeei para o hot para permanencia. se não houver, ele cria automaticamente.
 
-```
-media/orthomosaic/0/0/0/assets/entwine_pointcloud
-```
-
-E o conteúdo mínimo esperado dentro da pasta é:
-
-```
-entwine_pointcloud/
-├── ept-data/
-└── ept.json
-```
+MAS são 2 serviços no compose, cada um com uma funcionalidade. 1 pra buildar os tiles, outro para servir
 
 ---
 
 ## ▶️ Como rodar
 
-Caso a instalação das bibliotecas não funcione, você pode criar um ambiente virtual e instalar manualmente com:
+para buildar os tiles do assets escolhido execute
+(só precisa rodar esse 1x)
+`docker compose -f docker-compose.build_tiles.yml up --build`
 
-```bash
-python -m venv venv
-source venv/bin/activate   # Linux/Mac
-venv\Scripts\activate    # Windows
-
-pip install py3dtiles laspy[laszip] pyproj numpy
-```
-
-Em seguida, entre na pasta `tiling`:
-
-```bash
-cd tiling
-```
-
-E rode o script para gerar o dataset **3D Tiles** (Esse processo costuma demorar um pouco para finalizar):
-
-```bash
-python main.py
-```
-
-Com o dataset criado, suba o container com:
-
-```bash
-docker-compose up --build
-```
+e depois para servir, só executar `docker compose up --build`
 
 A aplicação ficará disponível em:
 
