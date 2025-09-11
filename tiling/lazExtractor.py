@@ -6,15 +6,13 @@ from pyproj import CRS, Transformer
 from typing import Tuple, Dict
 
 class LAZExtractor:
-    """Classe responsável pela extração e tratamento de dados dos arquivos LAZ"""
-    
     def __init__(self, diretorio_ept: Path):
         self.diretorio_ept = diretorio_ept
         self.metadados = self._ler_metadados_ept()
         self.transformer = self._configurar_transformador()
     
     def _ler_metadados_ept(self) -> Dict:
-        """Lê os metadados do EPT"""
+        # le os metadados do EPT
         ept_json_path = self.diretorio_ept / "ept.json"
         if not ept_json_path.exists():
             raise FileNotFoundError(f"Arquivo ept.json não encontrado: {ept_json_path}")
@@ -23,7 +21,7 @@ class LAZExtractor:
             return json.load(f)
     
     def _configurar_transformador(self) -> Transformer:
-        """Configura o transformador de coordenadas UTM para ECEF"""
+        # configura o transformador de coordenadas UTM para ECEF
         try:
             srs = self.metadados.get("srs", {})
             if "horizontal" in srs:
@@ -38,22 +36,21 @@ class LAZExtractor:
             return None
     
     def _extrair_cores_las(self, las: laspy.LasData) -> np.ndarray:
-        """Extrai cores RGB do arquivo LAS/LAZ"""
+        # extrai cores RGB do arquivo LAS/LAZ
         if hasattr(las, 'red') and hasattr(las, 'green') and hasattr(las, 'blue'):
             red = las.red
             green = las.green  
             blue = las.blue
             
-            # Detectar se está em formato 16-bit ou 8-bit e normalizar
             max_color = max(red.max(), green.max(), blue.max())
             
             if max_color > 255:
-                # Converte de 16-bit para 8-bit
+                # converte de 16-bit para 8-bit
                 red = (red / 65535.0 * 255).astype(np.uint8)
                 green = (green / 65535.0 * 255).astype(np.uint8)
                 blue = (blue / 65535.0 * 255).astype(np.uint8)
             else:
-                # Já está em 8-bit
+                # está em 8-bit
                 red = red.astype(np.uint8)
                 green = green.astype(np.uint8)
                 blue = blue.astype(np.uint8)
@@ -68,7 +65,7 @@ class LAZExtractor:
         return cores
     
     def _converter_coordenadas_para_ecef(self, pontos: np.ndarray) -> np.ndarray:
-        """Converte coordenadas UTM para ECEF"""
+        # converte coordenadas UTM para ECEF
         if self.transformer is None:
             print("Aviso: Transformador não configurado, usando coordenadas originais")
             return pontos
@@ -83,18 +80,14 @@ class LAZExtractor:
             return pontos
     
     def processar_arquivo_laz(self, arquivo_laz: Path) -> Tuple[np.ndarray, np.ndarray]:
-        """Processa um único arquivo LAZ"""
         try:
             with laspy.open(arquivo_laz) as las_file:
                 las = las_file.read()
                 
-                # Extrai coordenadas XYZ
                 pontos = np.column_stack([las.x, las.y, las.z])
                 
-                # Converte para ECEF
                 pontos_ecef = self._converter_coordenadas_para_ecef(pontos)
                 
-                # Extrai cores
                 cores = self._extrair_cores_las(las)
                 
                 return pontos_ecef, cores
@@ -104,7 +97,6 @@ class LAZExtractor:
             return None, None
     
     def processar_todos_arquivos_laz(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Processa todos os arquivos LAZ do diretório EPT"""
         arquivos_laz = list(self.diretorio_ept.glob("**/*.laz"))
         
         if not arquivos_laz:
@@ -127,13 +119,12 @@ class LAZExtractor:
         if not todos_pontos:
             raise ValueError("Nenhum arquivo LAZ válido foi processado!")
         
-        # Combina todos os pontos e cores
+        # combina todos os pontos e cores
         pontos_combinados = np.vstack(todos_pontos)
         cores_combinadas = np.vstack(todas_cores)
         
         print(f"Total de pontos carregados: {len(pontos_combinados):,}")
         
-        # Mostra bounds ECEF
         min_coords = np.min(pontos_combinados, axis=0)
         max_coords = np.max(pontos_combinados, axis=0)
         print(f"Bounds ECEF:")
@@ -143,5 +134,4 @@ class LAZExtractor:
         return pontos_combinados, cores_combinadas
     
     def obter_bounds_globais(self, pontos: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Retorna os bounds mínimos e máximos dos pontos"""
         return np.min(pontos, axis=0), np.max(pontos, axis=0)

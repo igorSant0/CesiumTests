@@ -10,7 +10,6 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token')
         
-        # Headers específicos para 3D Tiles
         if self.path.endswith('.pnts'):
             self.send_header('Content-Type', 'application/octet-stream')
         elif self.path.endswith('.json'):

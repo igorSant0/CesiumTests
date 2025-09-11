@@ -1,4 +1,3 @@
-// Configurações globais para melhor performance com tileset hierárquico
 Cesium.RequestScheduler.maximumRequestsPerServer = 6;
 Cesium.RequestScheduler.throttleRequests = true;
 const token =
@@ -16,11 +15,10 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     animation: false,
     vrButton: false,
     fullscreenButton: false,
-    requestRenderMode: true, // Renderizar apenas quando necessário
+    requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
 });
 
-// Configurações de performance da cena
 viewer.scene.globe.enableLighting = false;
 viewer.scene.fog.enabled = false;
 viewer.scene.skyAtmosphere.show = false;
@@ -33,10 +31,8 @@ let nuvemCentro = null;
 
 console.log("Iniciando carregamento do tileset...");
 
-// A lógica principal agora está dentro de uma função assíncrona
 async function carregarTileset() {
     try {
-        // As opções que estavam no construtor agora são passadas para 'fromUrl'
         const tilesetOptions = {
             url: "./3dTiles/tileset.json",
             debugShowBoundingVolume: false,
@@ -60,10 +56,8 @@ async function carregarTileset() {
             maximumMemoryUsage: 512,
         };
 
-        // 1. Carregamos o tileset com 'await' e esperamos ele ficar pronto
         const tileset = await Cesium.Cesium3DTileset.fromUrl(tilesetOptions.url, tilesetOptions);
 
-        // 2. Adicionamos o tileset já carregado à cena
         viewer.scene.primitives.add(tileset);
         console.log("Tileset carregado e adicionado à cena com sucesso!");
 
@@ -74,7 +68,6 @@ async function carregarTileset() {
             console.log("Todos os tiles visíveis foram carregados!");
         });
 
-        // 3. TODO O CÓDIGO QUE ESTAVA DENTRO DO '.then()' VEM AQUI
         console.log("Bounding sphere:", tileset.boundingSphere);
 
         tileset.pointCloudShading.pointSize = 15.0;
@@ -87,7 +80,7 @@ async function carregarTileset() {
         tileset.pointCloudShading.attenuation = false;
         console.log("Configurações de point cloud aplicadas");
 
-        loadedTileset = tileset; // Armazena na variável global
+        loadedTileset = tileset;
 
         const center = tileset.boundingSphere.center;
         const carto = Cesium.Cartographic.fromCartesian(center);
@@ -100,10 +93,8 @@ async function carregarTileset() {
         viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(0.0, -0.5, 300));
         console.log("Zoom inicial aplicado.");
     } catch (error) {
-        // O '.catch()' do promise agora é um bloco catch do try/catch
         console.error("Erro ao carregar o tileset:", error);
     }
 }
 
-// Executa a função principal para iniciar o carregamento
 carregarTileset();

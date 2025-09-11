@@ -1,6 +1,6 @@
-// Configurações globais para melhor performance com tileset hierárquico
 Cesium.RequestScheduler.maximumRequestsPerServer = 6;
 Cesium.RequestScheduler.throttleRequests = true;
+// token de uso global
 const token =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5M2M3MTk2MC1jY2JhLTRkNmYtYmNlZC03NzRjNTIxNmMxMmEiLCJpZCI6MzM3MjMwLCJpYXQiOjE3NTY4MTc4MTJ9.anLO7mF-4WBQt_M1t6w97sTS10Cl1zmRi6_4zQyj2rw";
 
@@ -20,7 +20,7 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     maximumRenderTimeChange: Infinity,
 });
 
-// Configurações de performance da cena
+// configurações de performance
 viewer.scene.globe.enableLighting = false;
 viewer.scene.fog.enabled = false;
 viewer.scene.skyAtmosphere.show = false;
@@ -33,10 +33,8 @@ let nuvemCentro = null;
 
 console.log("Iniciando carregamento do tileset...");
 
-// A lógica principal agora está dentro de uma função assíncrona
 async function carregarTileset() {
     try {
-        // As opções que estavam no construtor agora são passadas para 'fromUrl'
         const tilesetOptions = {
             url: "http://localhost:8080/3dTiles/tileset.json",
             debugShowBoundingVolume: false,
@@ -60,10 +58,9 @@ async function carregarTileset() {
             maximumMemoryUsage: 512,
         };
 
-        // 1. Carregamos o tileset com 'await' e esperamos ele ficar pronto
+        // carregando o datasaet
         const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8080/3dTiles/tileset.json");
 
-        // 2. Adicionamos o tileset já carregado à cena
         viewer.scene.primitives.add(tileset);
         console.log("Tileset carregado e adicionado à cena com sucesso!");
 
@@ -74,7 +71,6 @@ async function carregarTileset() {
             console.log("Todos os tiles visíveis foram carregados!");
         });
 
-        // 3. TODO O CÓDIGO QUE ESTAVA DENTRO DO '.then()' VEM AQUI
         console.log("Bounding sphere:", tileset.boundingSphere);
 
         tileset.pointCloudShading.pointSize = 15.0;
@@ -87,7 +83,7 @@ async function carregarTileset() {
         tileset.pointCloudShading.attenuation = false;
         console.log("Configurações de point cloud aplicadas");
 
-        loadedTileset = tileset; // Armazena na variável global
+        loadedTileset = tileset;
 
         const center = tileset.boundingSphere.center;
         const carto = Cesium.Cartographic.fromCartesian(center);
@@ -104,5 +100,4 @@ async function carregarTileset() {
     }
 }
 
-// Executa a função principal para iniciar o carregamento
 carregarTileset();

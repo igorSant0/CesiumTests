@@ -14,14 +14,9 @@ class HierarchicalTiler:
         self.tile_counter = 0
         
     def create_octree_tiles(self, points, colors, bounds, level=0, parent_error=1000.0):
-        """
-        Cria tiles hierárquicos usando octree para dividir espacialmente os pontos
-        """
         current_error = parent_error / 2.0
         
-        # Condições para criar tile folha (leaf)
         if len(points) <= self.max_points_per_tile or level >= self.max_levels:
-            # Tile folha - criar arquivo .pnts
             tile_name = f"tile_{self.tile_counter}.pnts"
             self.tile_counter += 1
             
@@ -44,14 +39,12 @@ class HierarchicalTiler:
                 "refine": "REPLACE"
             }
         
-        # Subdividir em 8 octantes (2x2x2)
         center = (bounds[0] + bounds[1]) / 2
         children = []
         
         for x in [0, 1]:
             for y in [0, 1]:
                 for z in [0, 1]:
-                    # Definir bounds do octante
                     min_bound = np.array([
                         bounds[0][0] if x == 0 else center[0],
                         bounds[0][1] if y == 0 else center[1],
@@ -63,7 +56,6 @@ class HierarchicalTiler:
                         center[2] if z == 0 else bounds[1][2]
                     ])
                     
-                    # Filtrar pontos neste octante
                     mask = (
                         (points[:, 0] >= min_bound[0]) & (points[:, 0] < max_bound[0]) &
                         (points[:, 1] >= min_bound[1]) & (points[:, 1] < max_bound[1]) &
@@ -83,7 +75,6 @@ class HierarchicalTiler:
                         )
                         children.append(child_tile)
         
-        # Se não há filhos, criar tile folha
         if not children:
             tile_name = f"tile_{self.tile_counter}.pnts"
             self.tile_counter += 1
@@ -106,7 +97,6 @@ class HierarchicalTiler:
                 "refine": "REPLACE"
             }
         
-        # Tile interno com filhos
         tile_center = (bounds[0] + bounds[1]) / 2
         tile_size = (bounds[1] - bounds[0]) / 2
         
@@ -125,10 +115,6 @@ class HierarchicalTiler:
         }
     
     def write_pnts(self, points, colors, filename):
-        """
-        Escreve um arquivo .pnts individual com posições e cores
-        """
-        # Calcula offsets para posições e cores
         positions_byte_offset = 0
         positions_data = points.astype(np.float32).tobytes()
         positions_byte_length = len(positions_data)
@@ -180,12 +166,9 @@ class HierarchicalTiler:
         print(f"  Criado tile: {filename} com {len(points)} pontos e cores")
     
     def create_tileset_json(self, root_tile, output_folder):
-        """
-        Cria o tileset.json hierárquico
-        """
         tileset = {
             "asset": {"version": "1.0"},
-            "geometricError": 2000.0,  # Erro geométrico alto para o root
+            "geometricError": 2000.0,
             "root": root_tile
         }
 
@@ -193,6 +176,296 @@ class HierarchicalTiler:
             json.dump(tileset, f, indent=2)
         
         print(f"Tileset hierárquico criado com {self.tile_counter} tiles")
+
+def create_tileset(points, output_folder, tile_name="tileset.json"):
+    mins = points.min(axis=0)
+    maxs = points.max(axis=0)
+    center = (mins + maxs) / 2
+    half_size = (maxs - mins) / 2
+
+    tileset = {
+        "asset": {"version": "1.0"},
+        "geometricError": 500,
+        "root": {
+            "boundingVolume": {
+                "box": [
+                    float(center[0]), float(center[1]), float(center[2]),
+                    float(half_size[0]), 0, 0,
+                    0, float(half_size[1]), 0,
+                    0, 0, float(half_size[2])
+                ]
+            },
+            "geometricError": 70,
+            "refine": "ADD",
+            "content": {"uri": "points.pnts"}
+        }
+    }
+
+    with open(f"{output_folder}/{tile_name}", "w") as f:
+        json.dump(tileset, f, indent=2)
+
+
+def write_pnts(points, colors, output_file):
+    positions_byte_offset = 0
+    positions_data = points.astype(np.float32).tobytes()
+    positions_byte_length = len(positions_data)
+    
+    colors_byte_offset = positions_byte_length
+    colors_data = colors.astype(np.uint8).tobytes()
+    colors_byte_length = len(colors_data)
+    
+    feature_table_json = {
+        "POINTS_LENGTH": len(points),
+        "POSITION": {"byteOffset": positions_byte_offset},
+        "RGB": {"byteOffset": colors_byte_offset}
+    }
+    
+    feature_table_str = json.dumps(feature_table_json, separators=(',', ':'))
+    feature_table_bytes = feature_table_str.encode('utf-8')
+    
+    feature_table_len = len(feature_table_bytes)
+    padding_length = (8 - (feature_table_len % 8)) % 8
+    feature_table_padded = feature_table_bytes + b' ' * padding_length
+    
+    feature_table_bin_len = positions_byte_length + colors_byte_length
+    
+    magic = b'pnts'
+    version = 1
+    byte_length = 28 + len(feature_table_padded) + feature_table_bin_len
+    feature_table_json_byte_length = len(feature_table_padded)
+    feature_table_binary_byte_length = feature_table_bin_len
+    batch_table_json_byte_length = 0
+    batch_table_binary_byte_length = 0
+    
+    header = struct.pack(
+        '<4sIIIIII',
+        magic,
+        version,
+        byte_length,
+        feature_table_json_byte_length,
+        feature_table_binary_byte_length,
+        batch_table_json_byte_length,
+        batch_table_binary_byte_length
+    )
+
+    with open(output_file, "wb") as f:
+        f.write(header)
+        f.write(feature_table_padded)
+        f.write(positions_data)
+        f.write(colors_data)
+
+
+def extract_colors_from_las(las):
+    try:
+        if hasattr(las, 'red') and hasattr(las, 'green') and hasattr(las, 'blue'):
+            red = las.red
+            green = las.green  
+            blue = las.blue
+            
+            max_color = max(red.max(), green.max(), blue.max())
+            
+            if max_color > 255:
+                red = (red / 65535.0 * 255).astype(np.uint8)
+                green = (green / 65535.0 * 255).astype(np.uint8)
+                blue = (blue / 65535.0 * 255).astype(np.uint8)
+            else:
+                red = red.astype(np.uint8)
+                green = green.astype(np.uint8)
+                blue = blue.astype(np.uint8)
+            
+            colors = np.column_stack((red, green, blue))
+            print(f"  Cores extraídas: formato {'16-bit' if max_color > 255 else '8-bit'} -> RGB 8-bit")
+            return colors
+            
+        else:
+            print("  Aviso: arquivo não contém informações de cor, usando cor padrão (branco)")
+            num_points = len(las.points)
+            return np.full((num_points, 3), 255, dtype=np.uint8)
+            
+    except Exception as e:
+        print(f"  Erro ao extrair cores: {e}, usando cor padrão (branco)")
+        num_points = len(las.points)
+        return np.full((num_points, 3), 255, dtype=np.uint8)
+
+
+def get_epsg_from_las(las):
+    if hasattr(las.header, 'epsg') and las.header.epsg is not None:
+        return las.header.epsg
+    
+    try:
+        if hasattr(las.header, 'crs') and las.header.crs is not None:
+            crs = las.header.crs
+            if hasattr(crs, 'to_epsg') and crs.to_epsg() is not None:
+                return crs.to_epsg()
+    except:
+        pass
+    
+    print("EPSG não encontrado no header, usando EPSG:32722 (WGS 84 / UTM zone 22S)")
+    return 32722
+
+
+def convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_tile=30000):
+    laz_files = glob.glob(os.path.join(laz_folder, "*.laz"))
+    
+    if not laz_files:
+        raise ValueError(f"Nenhum arquivo .laz encontrado na pasta: {laz_folder}")
+    
+    print(f"Encontrados {len(laz_files)} arquivos .laz")
+    print(f"Configuração: máximo {max_points_per_tile} pontos por tile")
+    
+    all_points = []
+    all_colors = []
+    epsg_code = None
+    transformer = None
+    
+    for i, laz_file in enumerate(laz_files):
+        print(f"Processando arquivo {i+1}/{len(laz_files)}: {os.path.basename(laz_file)}")
+        
+        try:
+            las = laspy.read(laz_file)
+            
+            current_epsg = get_epsg_from_las(las)
+            
+            if transformer is None:
+                epsg_code = current_epsg
+                print(f"EPSG detectado/usado: {epsg_code}")
+                
+                src_crs = CRS.from_epsg(epsg_code)
+                dst_crs = CRS.from_epsg(4978)
+                transformer = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
+            
+            elif current_epsg != epsg_code:
+                print(f"Aviso: arquivo {os.path.basename(laz_file)} pode ter EPSG diferente ({current_epsg}), usando {epsg_code}")
+            
+            x, y, z = transformer.transform(las.x, las.y, las.z)
+            points = np.vstack((x, y, z)).T
+            
+            colors = extract_colors_from_las(las)
+            
+            all_points.append(points)
+            all_colors.append(colors)
+            
+        except Exception as e:
+            print(f"Erro ao processar {os.path.basename(laz_file)}: {e}")
+            continue
+    
+    if not all_points:
+        raise ValueError("Nenhum arquivo foi processado com sucesso!")
+    
+    combined_points = np.vstack(all_points)
+    combined_colors = np.vstack(all_colors)
+    print(f"Total de pontos combinados: {len(combined_points)} com cores")
+    
+    os.makedirs(output_folder, exist_ok=True)
+    
+    print("Criando tileset hierárquico para carregamento progressivo...")
+    
+    tiler = HierarchicalTiler(max_points_per_tile=max_points_per_tile)
+    tiler.output_folder = output_folder
+    
+    mins = combined_points.min(axis=0)
+    maxs = combined_points.max(axis=0)
+    bounds = (mins, maxs)
+    
+    print(f"Bounds dos dados:")
+    print(f"  Min: [{mins[0]:.2f}, {mins[1]:.2f}, {mins[2]:.2f}]")
+    print(f"  Max: [{maxs[0]:.2f}, {maxs[1]:.2f}, {maxs[2]:.2f}]")
+    
+    root_tile = tiler.create_octree_tiles(combined_points, combined_colors, bounds)
+    tiler.create_tileset_json(root_tile, output_folder)
+    
+    print(f"Tileset hierárquico criado com sucesso em: {output_folder}")
+    print(f"Agora a nuvem de pontos será carregada progressivamente com cores!")
+
+
+def convert_multiple_laz_to_3dtiles_legacy(laz_folder, output_folder):
+    laz_files = glob.glob(os.path.join(laz_folder, "*.laz"))
+    
+    if not laz_files:
+        raise ValueError(f"Nenhum arquivo .laz encontrado na pasta: {laz_folder}")
+    
+    print(f"Encontrados {len(laz_files)} arquivos .laz")
+    
+    all_points = []
+    all_colors = []
+    epsg_code = None
+    transformer = None
+    
+    for i, laz_file in enumerate(laz_files):
+        print(f"Processando arquivo {i+1}/{len(laz_files)}: {os.path.basename(laz_file)}")
+        
+        try:
+            las = laspy.read(laz_file)
+            
+            current_epsg = get_epsg_from_las(las)
+            
+            if transformer is None:
+                epsg_code = current_epsg
+                print(f"EPSG detectado/usado: {epsg_code}")
+                
+                src_crs = CRS.from_epsg(epsg_code)
+                dst_crs = CRS.from_epsg(4978)
+                transformer = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
+            
+            elif current_epsg != epsg_code:
+                print(f"Aviso: arquivo {os.path.basename(laz_file)} pode ter EPSG diferente ({current_epsg}), usando {epsg_code}")
+            
+            x, y, z = transformer.transform(las.x, las.y, las.z)
+            points = np.vstack((x, y, z)).T
+            
+            colors = extract_colors_from_las(las)
+            
+            all_points.append(points)
+            all_colors.append(colors)
+            
+        except Exception as e:
+            print(f"Erro ao processar {os.path.basename(laz_file)}: {e}")
+            continue
+    
+    if not all_points:
+        raise ValueError("Nenhum arquivo foi processado com sucesso!")
+    
+    combined_points = np.vstack(all_points)
+    combined_colors = np.vstack(all_colors)
+    print(f"Total de pontos combinados: {len(combined_points)} com cores")
+    
+    os.makedirs(output_folder, exist_ok=True)
+    
+    write_pnts(combined_points, combined_colors, f"{output_folder}/points.pnts")
+    create_tileset(combined_points, output_folder)
+    
+    print(f"Tileset criado com sucesso em: {output_folder}")
+
+
+def convert_laz_to_3dtiles(laz_file, output_folder):
+    las = laspy.read(laz_file)
+
+    epsg_code = get_epsg_from_las(las)
+    print(f"EPSG detectado/usado: {epsg_code}")
+
+    src_crs = CRS.from_epsg(epsg_code)
+    dst_crs = CRS.from_epsg(4978)
+    transformer = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
+
+    x, y, z = transformer.transform(las.x, las.y, las.z)
+    points = np.vstack((x, y, z)).T
+    
+    colors = extract_colors_from_las(las)
+
+    write_pnts(points, colors, f"{output_folder}/points.pnts")
+    create_tileset(points, output_folder)
+
+
+if __name__ == "__main__":
+    laz_folder = "entwine_pointcloud/ept-data"
+    output_folder = "3dtiles_bkp"
+    
+    print("=== CONVERTENDO PARA TILESET HIERÁRQUICO ===")
+    print("Isso criará múltiplos arquivos .pnts para carregamento progressivo")
+    print("Evitando travamentos do navegador!")
+    print()
+    
+    convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_tile=25000)
 
 def create_tileset(points, output_folder, tile_name="tileset.json"):
     # bounding volume
@@ -405,21 +678,17 @@ def convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_ti
     if not all_points:
         raise ValueError("Nenhum arquivo foi processado com sucesso!")
     
-    # Combina todos os pontos e cores
     combined_points = np.vstack(all_points)
     combined_colors = np.vstack(all_colors)
     print(f"Total de pontos combinados: {len(combined_points)} com cores")
     
-    # Cria o diretório de saída se não existir
     os.makedirs(output_folder, exist_ok=True)
     
-    # NOVA IMPLEMENTAÇÃO: Cria tileset hierárquico
     print("Criando tileset hierárquico para carregamento progressivo...")
     
     tiler = HierarchicalTiler(max_points_per_tile=max_points_per_tile)
     tiler.output_folder = output_folder
     
-    # Calcula bounds dos dados
     mins = combined_points.min(axis=0)
     maxs = combined_points.max(axis=0)
     bounds = (mins, maxs)
@@ -428,7 +697,6 @@ def convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_ti
     print(f"  Min: [{mins[0]:.2f}, {mins[1]:.2f}, {mins[2]:.2f}]")
     print(f"  Max: [{maxs[0]:.2f}, {maxs[1]:.2f}, {maxs[2]:.2f}]")
     
-    # Cria estrutura hierárquica
     root_tile = tiler.create_octree_tiles(combined_points, combined_colors, bounds)
     tiler.create_tileset_json(root_tile, output_folder)
     
@@ -437,11 +705,6 @@ def convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_ti
 
 
 def convert_multiple_laz_to_3dtiles_legacy(laz_folder, output_folder):
-    """
-    VERSÃO ANTIGA (mantida para compatibilidade) - cria um único arquivo
-    NÃO RECOMENDADA para nuvens grandes pois pode travar o navegador
-    """
-    # Busca todos os arquivos .laz na pasta
     laz_files = glob.glob(os.path.join(laz_folder, "*.laz"))
     
     if not laz_files:
@@ -460,28 +723,22 @@ def convert_multiple_laz_to_3dtiles_legacy(laz_folder, output_folder):
         try:
             las = laspy.read(laz_file)
             
-            # Usa a função melhorada para detectar EPSG
             current_epsg = get_epsg_from_las(las)
             
-            # Configura transformação na primeira execução
             if transformer is None:
                 epsg_code = current_epsg
                 print(f"EPSG detectado/usado: {epsg_code}")
                 
-                # Configura transformação de coordenadas
                 src_crs = CRS.from_epsg(epsg_code)
-                dst_crs = CRS.from_epsg(4978)  # ECEF
+                dst_crs = CRS.from_epsg(4978)
                 transformer = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
             
-            # Verifica consistência
             elif current_epsg != epsg_code:
                 print(f"Aviso: arquivo {os.path.basename(laz_file)} pode ter EPSG diferente ({current_epsg}), usando {epsg_code}")
             
-            # Converte pontos para ECEF
             x, y, z = transformer.transform(las.x, las.y, las.z)
             points = np.vstack((x, y, z)).T
             
-            # Extrai cores do arquivo
             colors = extract_colors_from_las(las)
             
             all_points.append(points)
@@ -494,15 +751,12 @@ def convert_multiple_laz_to_3dtiles_legacy(laz_folder, output_folder):
     if not all_points:
         raise ValueError("Nenhum arquivo foi processado com sucesso!")
     
-    # Combina todos os pontos e cores
     combined_points = np.vstack(all_points)
     combined_colors = np.vstack(all_colors)
     print(f"Total de pontos combinados: {len(combined_points)} com cores")
     
-    # Cria o diretório de saída se não existir
     os.makedirs(output_folder, exist_ok=True)
     
-    # Cria os arquivos finais (versão antiga - um único arquivo)
     write_pnts(combined_points, combined_colors, f"{output_folder}/points.pnts")
     create_tileset(combined_points, output_folder)
     
@@ -510,12 +764,8 @@ def convert_multiple_laz_to_3dtiles_legacy(laz_folder, output_folder):
 
 
 def convert_laz_to_3dtiles(laz_file, output_folder):
-    """
-    Converte um único arquivo LAZ para 3D Tiles (função original mantida)
-    """
     las = laspy.read(laz_file)
 
-    # Usa a função melhorada para detectar EPSG
     epsg_code = get_epsg_from_las(las)
     print(f"EPSG detectado/usado: {epsg_code}")
 
@@ -523,20 +773,16 @@ def convert_laz_to_3dtiles(laz_file, output_folder):
     dst_crs = CRS.from_epsg(4978)  # ECEF
     transformer = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
 
-    # converte pontos
     x, y, z = transformer.transform(las.x, las.y, las.z)
     points = np.vstack((x, y, z)).T
     
-    # extrai cores
     colors = extract_colors_from_las(las)
 
-    # cria os arquivos
     write_pnts(points, colors, f"{output_folder}/points.pnts")
     create_tileset(points, output_folder)
 
 
 if __name__ == "__main__":
-    # Processa todos os arquivos .laz da pasta entwine_pointcloud/ept-data
     laz_folder = "entwine_pointcloud/ept-data"
     output_folder = "3dtiles_bkp"
     
@@ -545,5 +791,4 @@ if __name__ == "__main__":
     print("Evitando travamentos do navegador!")
     print()
     
-    # Usar a nova função hierárquica com 25.000 pontos por tile
     convert_multiple_laz_to_3dtiles(laz_folder, output_folder, max_points_per_tile=25000)
