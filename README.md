@@ -11,21 +11,20 @@ Antes de começar, certifique-se de ter instalado:
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
-Além disso, o ambiente utiliza as seguintes bibliotecas Python (caso queira rodar localmente sem Docker):
+Além disso, o ambiente utiliza as seguintes bibliotecas Python sendo instaladas usando ```pip install```:
 
-- [py3dtiles](https://github.com/Oslandia/py3dtiles)
-- [laszip](https://laszip.org/)
-- [laspy](https://github.com/laspy/laspy)
-- [pyproj](https://pyproj4.github.io/pyproj/stable/)
-- [numpy](https://numpy.org/)
+- [py3dtiles](https://github.com/Oslandia/py3dtiles)  
+- [laspy[laszip]](https://github.com/laspy/laspy) *(necessário para suportar arquivos LAZ)*  
+- [pyproj](https://pyproj4.github.io/pyproj/stable/)  
+- [numpy](https://numpy.org/)  
 
 ---
 
 ## 📂 Organização dos dados
 
-Após clonar este repositório, é necessário **copiar manualmente** a pasta `entwine_pointcloud` para dentro da pasta clonada.
+Após clonar este repositório, é necessário **copiar manualmente** a pasta `entwine_pointcloud` para dentro da pasta.
 
-O caminho de origem dos dados deve ser algo como:
+A pasta `entwine_pointcloud` pode ser encontrada em:
 
 ```
 media/orthomosaic/0/0/0/assets/entwine_pointcloud
@@ -50,7 +49,7 @@ python -m venv venv
 source venv/bin/activate   # Linux/Mac
 venv\Scripts\activate    # Windows
 
-pip install py3dtiles laszip laspy pyproj numpy
+pip install py3dtiles laspy[laszip] pyproj numpy
 ```
 
 Em seguida, entre na pasta `tiling`:
@@ -59,11 +58,12 @@ Em seguida, entre na pasta `tiling`:
 cd tiling
 ```
 
-E rode o script para gerar o dataset **3D Tiles**:
+E rode o script para gerar o dataset **3D Tiles** (Esse processo costuma demorar um pouco para finalizar):
 
 ```bash
 python main.py
 ```
+
 
 Com o dataset criado, suba o container com:
 
@@ -89,7 +89,3 @@ A aplicação é servida via **porta 8080**.
 - Sempre que fizer alterações em `index.html`, `style.css` ou `script.js`, basta atualizar a página no navegador.  
 - Caso não veja a mudança, faça um **hard reload** (`Ctrl + Shift + R` ou `Ctrl + F5`).  
 
-
-- O container já expõe a pasta do projeto local para dentro do ambiente do Docker.  
-- Sempre que fizer alterações em `index.html`, `style.css` ou `script.js`, basta atualizar a página no navegador.  
-- Caso não veja a mudança, faça um **hard reload** (`Ctrl + Shift + R` ou `Ctrl + F5`).  
