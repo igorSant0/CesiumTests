@@ -10,3 +10,4 @@ tilesLAZ/
 3dtiles_bkp
 venv/
 __pycache__/
+.env

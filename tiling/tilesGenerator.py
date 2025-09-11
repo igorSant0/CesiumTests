@@ -9,7 +9,7 @@ from lazExtractor import LAZExtractor
 class TileGenerator:
     
     def __init__(self, max_points_per_tile: int = 25000, max_levels: int = 6):
-        self.output_dir = Path("../3dTiles/")
+        self.output_dir = Path("/3dTiles/")
         self.max_points_per_tile = max_points_per_tile
         self.max_levels = max_levels
         self.tile_counter = 0
@@ -182,11 +182,25 @@ class TileGenerator:
             return tile_dict
     
     def _limpar_diretorio_saida(self):
-        if self.output_dir.exists():
-            if self.output_dir.is_file() or self.output_dir.is_symlink():
-                self.output_dir.unlink()
-            elif self.output_dir.is_dir():
-                shutil.rmtree(self.output_dir)
+        """
+        Limpa o conteúdo do diretório de saída sem apagar o próprio diretório.
+        Isso evita o erro 'Device or resource busy' ao usar volumes Docker.
+        """
+        # Verifica se o diretório de saída realmente existe e é um diretório
+        if not self.output_dir.is_dir():
+            return  # Se não for um diretório, não há nada a fazer
+
+        # Itera sobre cada item (arquivo, link ou subdiretório) DENTRO do diretório de saída
+        for item_path in self.output_dir.iterdir():
+            try:
+                # Se for um arquivo ou link simbólico, apaga com unlink()
+                if item_path.is_file() or item_path.is_symlink():
+                    item_path.unlink()
+                # Se for um subdiretório, apaga recursivamente com rmtree()
+                elif item_path.is_dir():
+                    shutil.rmtree(item_path)
+            except Exception as e:
+                print(f"Erro ao deletar {item_path}: {e}")
         
         self.output_dir.mkdir(parents=True, exist_ok=True)
     

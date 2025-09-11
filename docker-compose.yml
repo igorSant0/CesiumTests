@@ -1,13 +1,27 @@
 version: "3.8"
 
 services:
-    cesium-viewer:
-        image: python:3.9-alpine
-        container_name: cesium
-        ports:
-            - "8080:8000"
-        volumes:
-            - .:/app
-        working_dir: /app
-        command: python -m http.server 8000
-        restart: unless-stopped
+  cesium-viewer:
+    build:
+      context: ./src
+    image: cesium-viewer:latest
+    ports:
+      - "8000:80"
+    volumes:
+      - ./src:/app
+      - ${ASSETS_PATH}:/assets
+      - ${TILES_PATH}:/3dTiles
+    environment:
+      - BUILD_TILES=${BUILD_TILES}
+    command: ./entrypoint.sh
+    restart: unless-stopped
+
+  tile-builder:
+    build:
+      context: ./tiling
+    image: tile-builder:latest
+    volumes:
+      - ${TILES_PATH}:/3dTiles
+      - ${ASSETS_PATH}:/assets
+      - ./tiling:/app
+    command: python main.py

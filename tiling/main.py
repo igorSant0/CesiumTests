@@ -3,7 +3,8 @@ from lazExtractor import LAZExtractor
 from tilesGenerator import TileGenerator
 
 def main():
-    DIRETORIO_EPT = Path("../entwine_pointcloud")
+    DIRETORIO_EPT = Path("/assets")
+
     MAXIMO_PONTOS_POR_TILE = 25000
     MAX_NIVEIS_OCTREE = 6
     
