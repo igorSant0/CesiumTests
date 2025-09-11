@@ -1,5 +1,4 @@
 node_modules/
-3dTiles_bkp/
 entwine_pointcloud/
 odm_georeferencing/
 odm_texturing/
@@ -7,4 +6,7 @@ tilesLAS/
 tilesLAZ/
 3dTiles/
 3dtiles/
+3dTiles_bkp/
+3dtiles_bkp
 venv/
+__pycache__/

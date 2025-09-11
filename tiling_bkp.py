@@ -538,7 +538,7 @@ def convert_laz_to_3dtiles(laz_file, output_folder):
 if __name__ == "__main__":
     # Processa todos os arquivos .laz da pasta entwine_pointcloud/ept-data
     laz_folder = "entwine_pointcloud/ept-data"
-    output_folder = "3dTiles"
+    output_folder = "3dtiles_bkp"
     
     print("=== CONVERTENDO PARA TILESET HIERÁRQUICO ===")
     print("Isso criará múltiplos arquivos .pnts para carregamento progressivo")
