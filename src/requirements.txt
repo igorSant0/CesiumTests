@@ -1,4 +1,0 @@
-numpy
-py3dtiles 
-laspy[laszip] 
-pyproj 

@@ -7,11 +7,41 @@
             href="https://cesium.com/downloads/cesiumjs/releases/1.133/Build/Cesium/Widgets/widgets.css"
             rel="stylesheet"
         />
-        <!-- deixar a customização do mapa por último -->
-        <!-- <link rel="stylesheet" href="styles.css" /> -->
+        <link rel="stylesheet" href="styles.css" />
     </head>
     <body>
         <div id="cesiumContainer"></div>
+        <div id="controls">
+            <h2>Configurações de Visualização</h2>
+            <div class="control-group">
+                <label for="lod">LOD (maximumScreenSpaceError)</label>
+                <input type="range" id="lod" min="0" max="128" step="1" value="48">
+                <span id="lodValue">48</span>
+            </div>
+            <div class="control-group">
+                <label for="pointSize">Tamanho do Ponto</label>
+                <input type="range" id="pointSize" min="1" max="20" step="1" value="12">
+                <span id="pointSizeValue">12</span>
+            </div>
+            <div class="control-group">
+                <label for="edlStrength">Força EDL</label>
+                <input type="range" id="edlStrength" min="0" max="5" step="0.1" value="0.8">
+                <span id="edlStrengthValue">0.8</span>
+            </div>
+            <div class="control-group">
+                <label for="edlRadius">Raio EDL</label>
+                <input type="range" id="edlRadius" min="0" max="5" step="0.1" value="1.5">
+                <span id="edlRadiusValue">1.5</span>
+            </div>
+            <div class="control-group">
+                <label for="maxAttenuation">Atenuação Máxima</label>
+                <input type="range" id="maxAttenuation" min="0" max="32" step="1" value="4">
+                <span id="maxAttenuationValue">4</span>
+            </div>
+            <div class="control-group">
+                <button id="toggleEDL">Alternar Eye Dome Lighting</button>
+            </div>
+        </div>
 
         <script src="https://cesium.com/downloads/cesiumjs/releases/1.133/Build/Cesium/Cesium.js"></script>
          

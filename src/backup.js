@@ -45,7 +45,7 @@ async function carregarTileset() {
             skipScreenSpaceErrorFactor: 16,
             skipLevels: 1,
             immediatelyLoadDesiredLevelOfDetail: false,
-            loadSiblings: false,
+            loadSiblings: true,
             cullWithChildrenBounds: true,
             cullRequestsWhileMoving: true,
             cullRequestsWhileMovingMultiplier: 60.0,

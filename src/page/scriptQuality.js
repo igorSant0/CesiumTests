@@ -37,30 +37,30 @@ console.log("Iniciando carregamento do tileset...");
 async function carregarTileset() {
     try {
         const tilesetOptions = {
-            url: "http://192.168.0.103:8000/3dTiles/tileset.json",
+            url: "http://localhost:8000/3dTiles/tileset.json",
             debugShowBoundingVolume: false,
             debugShowContentBoundingVolume: false,
-            maximumScreenSpaceError: 48,                               
+            maximumScreenSpaceError: 48,
             preloadWhenHidden: false,
             preloadFlightDestinations: false,
-            skipLevelOfDetail: true,
-            baseScreenSpaceError: 768,                            
-            skipScreenSpaceErrorFactor: 12,                          
+            skipLevelOfDetail: false,
+            baseScreenSpaceError: 768,
+            skipScreenSpaceErrorFactor: 12,
             skipLevels: 0,
             immediatelyLoadDesiredLevelOfDetail: false,
-            loadSiblings: false,
+            loadSiblings: true,
             cullWithChildrenBounds: true,
             cullRequestsWhileMoving: true,
             cullRequestsWhileMovingMultiplier: 60.0,
             dynamicScreenSpaceError: true,
             dynamicScreenSpaceErrorDensity: 0.00278,
-            dynamicScreenSpaceErrorFactor: 3.0,                        
-            dynamicScreenSpaceErrorHeightFalloff: 0.15,            
+            dynamicScreenSpaceErrorFactor: 3.0,
+            dynamicScreenSpaceErrorHeightFalloff: 0.15,
             maximumMemoryUsage: 1024,
         };
 
         // carregando o datasaet
-        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://192.168.0.103:8000/3dTiles/tileset.json", tilesetOptions);
+        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8000/3dTiles/tileset.json", tilesetOptions);
 
         viewer.scene.primitives.add(tileset);
         console.log("Tileset carregado e adicionado à cena com sucesso!");
@@ -73,16 +73,16 @@ async function carregarTileset() {
         });
 
         console.log("Bounding sphere:", tileset.boundingSphere);
-        
-        tileset.pointCloudShading.pointSize = 12.0;              
-        tileset.pointCloudShading.maximumAttenuation = 4;            
+
+        tileset.pointCloudShading.pointSize = 12.0;
+        tileset.pointCloudShading.maximumAttenuation = 4;
         tileset.pointCloudShading.baseResolution = 0;
         tileset.pointCloudShading.geometricErrorScale = 1.0;
-        tileset.pointCloudShading.eyeDomeLighting = true;              
-        tileset.pointCloudShading.eyeDomeLightingStrength = 0.8;     
-        tileset.pointCloudShading.eyeDomeLightingRadius = 1.5;        
-        tileset.pointCloudShading.attenuation = true;                 
-        tileset.pointCloudShading.attenuationRange = 800;             
+        tileset.pointCloudShading.eyeDomeLighting = true;
+        tileset.pointCloudShading.eyeDomeLightingStrength = 0.8;
+        tileset.pointCloudShading.eyeDomeLightingRadius = 1.5;
+        tileset.pointCloudShading.attenuation = true;
+        tileset.pointCloudShading.attenuationRange = 800;
         console.log("Configurações de point cloud aplicadas");
 
         loadedTileset = tileset;
@@ -97,9 +97,51 @@ async function carregarTileset() {
 
         viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(0.0, -0.5, 200));
         console.log("Zoom inicial aplicado.");
-        
-        viewer.scene.postProcessStages.fxaa.enabled = true;    
-        
+
+        viewer.scene.postProcessStages.fxaa.enabled = true;
+
+        // Conectar controles da UI
+        document.getElementById("lod").addEventListener("input", (event) => {
+            const value = parseInt(event.target.value);
+            loadedTileset.maximumScreenSpaceError = value;
+            document.getElementById("lodValue").innerText = value;
+            viewer.scene.requestRender();
+        });
+
+        document.getElementById("pointSize").addEventListener("input", (event) => {
+            const value = parseInt(event.target.value);
+            loadedTileset.pointCloudShading.pointSize = value;
+            document.getElementById("pointSizeValue").innerText = value;
+            viewer.scene.requestRender();
+        });
+
+        document.getElementById("edlStrength").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value);
+            loadedTileset.pointCloudShading.eyeDomeLightingStrength = value;
+            document.getElementById("edlStrengthValue").innerText = value;
+            viewer.scene.requestRender();
+        });
+
+        document.getElementById("edlRadius").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value);
+            loadedTileset.pointCloudShading.eyeDomeLightingRadius = value;
+            document.getElementById("edlRadiusValue").innerText = value;
+            viewer.scene.requestRender();
+        });
+
+        document.getElementById("maxAttenuation").addEventListener("input", (event) => {
+            const value = parseInt(event.target.value);
+            loadedTileset.pointCloudShading.maximumAttenuation = value;
+            document.getElementById("maxAttenuationValue").innerText = value;
+            viewer.scene.requestRender();
+        });
+
+        document.getElementById("toggleEDL").addEventListener("click", () => {
+            loadedTileset.pointCloudShading.eyeDomeLighting = !loadedTileset.pointCloudShading.eyeDomeLighting;
+            viewer.scene.requestRender();
+        });
+
+
     } catch (error) {
         console.error("Erro ao carregar o tileset:", error);
     }
