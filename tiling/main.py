@@ -1,6 +1,7 @@
 from pathlib import Path
 from lazExtractor import LAZExtractor
 from tilesGenerator import TileGenerator
+from tilesGeneratorQuality import TileGeneratorQuality
 
 def main():
     DIRETORIO_EPT = Path("/assets")
@@ -12,7 +13,7 @@ def main():
     processor = LAZExtractor(DIRETORIO_EPT)
     todos_pontos, todas_cores = processor.processar_todos_arquivos_laz()
     
-    generator = TileGenerator(
+    generator = TileGeneratorQuality(
         max_points_per_tile=MAXIMO_PONTOS_POR_TILE,
         max_levels=MAX_NIVEIS_OCTREE
     )

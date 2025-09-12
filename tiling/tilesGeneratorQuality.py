@@ -6,9 +6,9 @@ from pathlib import Path
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from lazExtractor import LAZExtractor
 
-class TileGenerator:
-    def __init__(self, max_points_per_tile: int = 25000, max_levels: int = 6):
-        self.output_dir = Path("/3dTiles/")
+class TileGeneratorQuality:
+    def __init__(self, max_points_per_tile: int = 20000, max_levels: int = 7):
+        self.output_dir = Path("../3dTiles/")
         self.max_points_per_tile = max_points_per_tile
         self.max_levels = max_levels
         self.tile_counter = 0
@@ -30,13 +30,16 @@ class TileGenerator:
         return BoundingVolumeBox.from_list(box_array)
     
     def _escrever_tile_pnts(self, pontos: np.ndarray, cores: np.ndarray, filepath: Path):
-        # escreve um tile no formato .pnts
         num_pontos = len(pontos)
+        
+        center = np.mean(pontos, axis=0)
+        pontos_centrados = pontos - center
         
         feature_table_json = {
             "POINTS_LENGTH": num_pontos,
             "POSITION": {"byteOffset": 0},
-            "RGB": {"byteOffset": num_pontos * 12}
+            "RGB": {"byteOffset": num_pontos * 12},
+            "RTC_CENTER": [float(center[0]), float(center[1]), float(center[2])]
         }
         
         # serializa json e adiciona padding
@@ -45,8 +48,8 @@ class TileGenerator:
         ft_json_padding = (4 - len(ft_json_bytes) % 4) % 4
         ft_json_bytes += b' ' * ft_json_padding
         
-        positions = pontos.astype(np.float32).tobytes()
-        colors = cores.astype(np.uint8).tobytes()
+        positions = pontos_centrados.astype(np.float32).tobytes()
+        colors = np.clip(cores, 0, 255).astype(np.uint8).tobytes()
         ft_binary = positions + colors
         ft_binary_padding = (8 - len(ft_binary) % 8) % 8
         ft_binary += b'\x00' * ft_binary_padding
@@ -58,7 +61,6 @@ class TileGenerator:
         ft_json_length = len(ft_json_bytes)
         ft_binary_length = len(ft_binary)
         
-        # escrev
         with open(filepath, 'wb') as f:
             # header
             f.write(magic)
@@ -66,10 +68,9 @@ class TileGenerator:
             f.write(struct.pack('<I', byte_length))
             f.write(struct.pack('<I', ft_json_length))
             f.write(struct.pack('<I', ft_binary_length))
-            f.write(struct.pack('<I', 0))  # Batch Table JSON length
-            f.write(struct.pack('<I', 0))  # Batch Table Binary length
+            f.write(struct.pack('<I', 0))
+            f.write(struct.pack('<I', 0))  
             
-            # Feature Table
             f.write(ft_json_bytes)
             f.write(ft_binary)
     
@@ -80,7 +81,6 @@ class TileGenerator:
         octantes = []
         
         for i in range(8):
-            # define limites do octante
             oct_min = min_bounds.copy()
             oct_max = max_bounds.copy()
             
@@ -93,11 +93,12 @@ class TileGenerator:
             if i & 4: oct_min[2] = center[2]
             else: oct_max[2] = center[2]
             
-            mask = np.all((pontos >= oct_min) & (pontos < oct_max), axis=1)
+            mask = np.all((pontos >= oct_min - 1e-6) & (pontos <= oct_max + 1e-6), axis=1)
             pontos_oct = pontos[mask]
             cores_oct = cores[mask]
             
-            if len(pontos_oct) > 0:
+            min_points_threshold = max(800, self.max_points_per_tile // 15)  # Threshold mais alto para distribuição mais uniforme
+            if len(pontos_oct) >= min_points_threshold:
                 octantes.append({
                     'pontos': pontos_oct,
                     'cores': cores_oct,
@@ -108,21 +109,23 @@ class TileGenerator:
     
     def _construir_tiles_octree(self, pontos: np.ndarray, cores: np.ndarray, 
                                nivel: int = 0, bounds=None) -> dict:
-        # construção recursiva
         if bounds is None:
             min_coords = np.min(pontos, axis=0)
             max_coords = np.max(pontos, axis=0)
-            bounds = (min_coords, max_coords)
+            padding = (max_coords - min_coords) * 0.001
+            bounds = (min_coords - padding, max_coords + padding)
         
         bounding_volume = self._criar_bounding_volume_from_points(pontos)
         
         diagonal = np.linalg.norm(bounds[1] - bounds[0])
-        geometric_error = diagonal / (2 ** nivel)
+        base_error = diagonal * 0.4                                   
+        level_factor = 2.0 ** (-nivel * 0.6)                         
+        geometric_error = max(1.0, base_error * level_factor)     
         
         deve_criar_folha = (
             len(pontos) <= self.max_points_per_tile or
             nivel >= self.max_levels or
-            geometric_error < 10.0
+            geometric_error < 1.0                                  
         )
         
         if deve_criar_folha:
@@ -160,7 +163,7 @@ class TileGenerator:
             # cria tiles filhos recursivamente
             children = []
             for octante in octantes:
-                if len(octante['pontos']) >= 100:
+                if len(octante['pontos']) >= 400:                    
                     child = self._construir_tiles_octree(
                         octante['pontos'], 
                         octante['cores'],
@@ -181,21 +184,13 @@ class TileGenerator:
             return tile_dict
     
     def _limpar_diretorio_saida(self):
-        """
-        Limpa o conteúdo do diretório de saída sem apagar o próprio diretório.
-        Isso evita o erro 'Device or resource busy' ao usar volumes Docker.
-        """
-        # Verifica se o diretório de saída realmente existe e é um diretório
         if not self.output_dir.is_dir():
-            return  # Se não for um diretório, não há nada a fazer
+            return
 
-        # Itera sobre cada item (arquivo, link ou subdiretório) DENTRO do diretório de saída
         for item_path in self.output_dir.iterdir():
             try:
-                # Se for um arquivo ou link simbólico, apaga com unlink()
                 if item_path.is_file() or item_path.is_symlink():
                     item_path.unlink()
-                # Se for um subdiretório, apaga recursivamente com rmtree()
                 elif item_path.is_dir():
                     shutil.rmtree(item_path)
             except Exception as e:
@@ -204,15 +199,21 @@ class TileGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def gerar_tileset(self, pontos: np.ndarray, cores: np.ndarray) -> dict:
-        print("Construindo árvore de tiles octree...")
+        print("Construindo árvore de tiles octree otimizada...")
+        print(f"Configurações: {self.max_points_per_tile} pontos/tile, {self.max_levels} níveis máximos")
         
         self._limpar_diretorio_saida()
         
         tile_raiz = self._construir_tiles_octree(pontos, cores)
         
+        min_coords = np.min(pontos, axis=0)
+        max_coords = np.max(pontos, axis=0)
+        diagonal_global = np.linalg.norm(max_coords - min_coords)
+        geometric_error_global = diagonal_global * 0.6               
+        
         tileset = {
             "asset": {"version": "1.0"},
-            "geometricError": tile_raiz["geometricError"],
+            "geometricError": geometric_error_global,
             "root": tile_raiz
         }
         
