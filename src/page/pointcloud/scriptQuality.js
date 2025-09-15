@@ -1,5 +1,5 @@
 //ip: 192.168.0.103
-Cesium.RequestScheduler.maximumRequestsPerServer = 6;
+Cesium.RequestScheduler.maximumRequestsPerServer = 12;
 Cesium.RequestScheduler.throttleRequests = true;
 // token de uso global
 const token =
