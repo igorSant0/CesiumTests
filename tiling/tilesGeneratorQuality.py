@@ -7,7 +7,7 @@ from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from lazExtractor import LAZExtractor
 
 class TileGeneratorQuality:
-    def __init__(self, max_points_per_tile: int = 20000, max_levels: int = 7):
+    def __init__(self, max_points_per_tile: int = 30000, max_levels: int = 6):
         self.output_dir = Path("../3dTiles/")
         self.max_points_per_tile = max_points_per_tile
         self.max_levels = max_levels
@@ -74,7 +74,7 @@ class TileGeneratorQuality:
             f.write(ft_json_bytes)
             f.write(ft_binary)
     
-    def _dividir_pontos_octree(self, pontos: np.ndarray, cores: np.ndarray, bounds) -> list:
+    def _dividir_pontos_octree(self, pontos: np.ndarray, cores: np.ndarray, bounds, nivel: int = 0) -> list:
         min_bounds, max_bounds = bounds
         center = (min_bounds + max_bounds) / 2.0
         
@@ -97,7 +97,7 @@ class TileGeneratorQuality:
             pontos_oct = pontos[mask]
             cores_oct = cores[mask]
             
-            min_points_threshold = max(800, self.max_points_per_tile // 15)  # Threshold mais alto para distribuição mais uniforme
+            min_points_threshold = max(200, self.max_points_per_tile // (8 + nivel * 2))  # Threshold dinâmico baseado no nível
             if len(pontos_oct) >= min_points_threshold:
                 octantes.append({
                     'pontos': pontos_oct,
@@ -118,14 +118,20 @@ class TileGeneratorQuality:
         bounding_volume = self._criar_bounding_volume_from_points(pontos)
         
         diagonal = np.linalg.norm(bounds[1] - bounds[0])
-        base_error = diagonal * 0.4                                   
-        level_factor = 2.0 ** (-nivel * 0.6)                         
-        geometric_error = max(1.0, base_error * level_factor)     
+        
+        if nivel <= 2:  # Níveis iniciais - mais conservador para performance
+            base_error = diagonal * 1.5
+            level_factor = 2.0 ** (-nivel * 0.3)
+        else:  # Níveis detalhados - manter precisão para qualidade
+            base_error = diagonal * 0.8
+            level_factor = 2.0 ** (-nivel * 0.5)
+        
+        geometric_error = max(2.0, base_error * level_factor)     
         
         deve_criar_folha = (
             len(pontos) <= self.max_points_per_tile or
             nivel >= self.max_levels or
-            geometric_error < 1.0                                  
+            geometric_error < 2.0                   
         )
         
         if deve_criar_folha:
@@ -142,11 +148,9 @@ class TileGeneratorQuality:
                 "refine": "REPLACE"
             }
         else:
-            # tile pai -> divide em octantes
-            octantes = self._dividir_pontos_octree(pontos, cores, bounds)
+            octantes = self._dividir_pontos_octree(pontos, cores, bounds, nivel)
             
             if len(octantes) <= 1:
-                # se não conseguiu dividi forçar criação de folha
                 self.tile_counter += 1
                 tile_filename = f"tile_{self.tile_counter}.pnts"
                 tile_path = self.output_dir / tile_filename
@@ -160,7 +164,6 @@ class TileGeneratorQuality:
                     "refine": "REPLACE"
                 }
             
-            # cria tiles filhos recursivamente
             children = []
             for octante in octantes:
                 if len(octante['pontos']) >= 400:                    
@@ -183,10 +186,58 @@ class TileGeneratorQuality:
             
             return tile_dict
     
+    def _verificar_tileset_existente(self) -> bool:
+        if not self.output_dir.exists() or not self.output_dir.is_dir():
+            print("Pasta de output não existe")
+            return False
+        
+        tileset_path = self.output_dir / "tileset.json"
+        if not tileset_path.exists():
+            print("Arquivo tileset.json não encontrado")
+            return False
+        
+        try:
+            with open(tileset_path, 'r') as f:
+                tileset_data = json.load(f)
+            
+            if not all(key in tileset_data for key in ["asset", "geometricError", "root"]):
+                print("Estrutura do tileset.json inválida")
+                return False
+            
+            tiles_esperados = self._contar_tiles_no_tileset(tileset_data["root"])
+            
+
+            tiles_existentes = list(self.output_dir.glob("*.pnts"))
+            
+            if len(tiles_existentes) >= tiles_esperados and tiles_esperados > 0:
+                print(f"Tileset válido encontrado: {len(tiles_existentes)} tiles")
+                return True
+            else:
+                print(f"Tileset incompleto: {len(tiles_existentes)} tiles encontrados, {tiles_esperados} esperados")
+                return False
+            
+        except (json.JSONDecodeError, KeyError, Exception) as e:
+            print(f"Erro ao verificar tileset: {e}")
+            return False
+    
+    def _contar_tiles_no_tileset(self, tile_node: dict) -> int:
+        count = 0
+        
+        if "content" in tile_node and "uri" in tile_node["content"]:
+            count += 1
+        
+        if "children" in tile_node:
+            for child in tile_node["children"]:
+                count += self._contar_tiles_no_tileset(child)
+        
+        return count
+    
     def _limpar_diretorio_saida(self):
         if not self.output_dir.is_dir():
+            self.output_dir.mkdir(parents=True, exist_ok=True)
             return
 
+        print("Limpando diretório de saída...")
         for item_path in self.output_dir.iterdir():
             try:
                 if item_path.is_file() or item_path.is_symlink():
@@ -198,11 +249,34 @@ class TileGeneratorQuality:
         
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
-    def gerar_tileset(self, pontos: np.ndarray, cores: np.ndarray) -> dict:
+    def gerar_tileset(self, pontos: np.ndarray, cores: np.ndarray, forcar_regeneracao: bool = False) -> dict:
+
+        print("Verificando tileset existente...")
+        
+        if not forcar_regeneracao and self._verificar_tileset_existente():
+            print("Tileset válido encontrado! Carregando tileset existente...")
+            tileset_path = self.output_dir / "tileset.json"
+            with open(tileset_path, 'r') as f:
+                tileset_existente = json.load(f)
+            
+
+            tiles_existentes = list(self.output_dir.glob("*.pnts"))
+            self.tile_counter = len(tiles_existentes)
+            print(f"Reutilizando tileset com {self.tile_counter} tiles existentes")
+            
+            return tileset_existente
+        
+        if forcar_regeneracao:
+            print("Regeneração forçada - criando novo tileset...")
+        else:
+            print("Tileset não encontrado ou inválido - criando novo tileset...")
+        
         print("Construindo árvore de tiles octree otimizada...")
         print(f"Configurações: {self.max_points_per_tile} pontos/tile, {self.max_levels} níveis máximos")
         
         self._limpar_diretorio_saida()
+        
+        self.tile_counter = 0
         
         tile_raiz = self._construir_tiles_octree(pontos, cores)
         
@@ -220,6 +294,7 @@ class TileGeneratorQuality:
         return tileset
     
     def salvar_tileset_json(self, tileset: dict):
+
         tileset_path = self.output_dir / "tileset.json"
         with open(tileset_path, 'w') as f:
             json.dump(tileset, f, indent=2)
