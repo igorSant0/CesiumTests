@@ -9,7 +9,7 @@ services:
       - "8000:80"
     volumes:
       - ./src:/app
-      - ${ASSETS_PATH}:/assets
+      - ${POINTCLOUD_ASSETS_PATH}:/assets
       - ${TILES_PATH}:/3dTiles
     command: ./entrypoint.sh
     restart: unless-stopped

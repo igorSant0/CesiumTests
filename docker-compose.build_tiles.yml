@@ -7,6 +7,6 @@ services:
     image: tile-builder:latest
     volumes:
       - ${TILES_PATH}:/3dTiles
-      - ${ASSETS_PATH}:/assets
+      - ${POINTCLOUD_ASSETS_PATH}:/assets
       - ./tiling:/app
     command: python main.py
