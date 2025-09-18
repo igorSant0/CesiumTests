@@ -11,5 +11,6 @@ services:
       - ./src:/app
       - ${POINTCLOUD_ASSETS_PATH}:/assets
       - ${TILES_PATH}:/3dTiles
+      - ./3dTilesTexturing:/3dTilesTexturing
     command: ./entrypoint.sh
     restart: unless-stopped

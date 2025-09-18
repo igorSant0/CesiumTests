@@ -36,7 +36,7 @@ console.log("Iniciando carregamento do tileset...");
 async function carregarTileset() {
     try {
         const tilesetOptions = {
-            url: "http://localhost:8000/3dTiles/tileset.json",
+            url: "http://localhost:8000/3dTilesTexturing/tileset.json",
             debugShowBoundingVolume: false,
             debugShowContentBoundingVolume: false,
             maximumScreenSpaceError: 64,
@@ -59,7 +59,7 @@ async function carregarTileset() {
         };
 
         // carregando o datasaet
-        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8000/3dTiles/tileset.json");
+        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8000/3dTilesTexturing/tileset.json");
 
         viewer.scene.primitives.add(tileset);
         console.log("Tileset carregado e adicionado à cena com sucesso!");
