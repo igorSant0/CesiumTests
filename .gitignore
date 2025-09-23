@@ -13,3 +13,4 @@ tilesLAZ/
 venv/
 __pycache__/
 .env
+obj2tiles/
