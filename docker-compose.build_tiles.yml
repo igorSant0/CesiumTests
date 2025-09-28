@@ -3,10 +3,10 @@ version: "3.8"
 services:
   tile-builder:
     build:
-      context: ./tiling
+      context: ./src/config
     image: tile-builder:latest
     volumes:
-      - ${TILES_PATH}:/3dTiles
-      - ${POINTCLOUD_ASSETS_PATH}:/assets
-      - ./tiling:/app
-    command: python main.py
+      - ${POINTCLOUD_TILES_PATH}:/3dTilesPointCloud
+      - ${POINTCLOUD_ASSETS_PATH}:/PointCloud_assets
+    environment:
+      - PYTHONUNBUFFERED=1

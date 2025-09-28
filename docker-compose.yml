@@ -1,16 +1,16 @@
-version: "3.8"
-
 services:
   cesium-viewer:
     build:
-      context: ./src
+      context: .
+      dockerfile: Dockerfile
     image: cesium-viewer:latest
     ports:
       - "8000:80"
     volumes:
-      - ./src:/app
-      - ${POINTCLOUD_ASSETS_PATH}:/assets
-      - ${TILES_PATH}:/3dTiles
-      - ./3dTilesTexturing:/3dTilesTexturing
-    command: ./entrypoint.sh
+      - ${POINTCLOUD_TILES_PATH}:/3dTilesPointCloud
+      - ${POINTCLOUD_ASSETS_PATH}:/PointCloud_assets
+      - ./src/config/nginx.conf:/etc/nginx/nginx.conf
+      - ./src/page:/usr/share/nginx/html
+    environment:
+      - NGINX_PORT=80
     restart: unless-stopped
