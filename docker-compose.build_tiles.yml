@@ -6,7 +6,8 @@ services:
       context: ./src/config
     image: tile-builder:latest
     volumes:
-      - ${POINTCLOUD_TILES_PATH}:/3dTilesPointCloud
-      - ${POINTCLOUD_ASSETS_PATH}:/PointCloud_assets
+      - ${POINTCLOUD_TILES}:/3dTilesPointCloud
+      - ${POINTCLOUD_PY3D_ASSETS}:/PointCloud_py3d_assets
+      - ${POINTCLOUD_PDAL_ASSETS}:/PointCloud_pdal_assets
     environment:
       - PYTHONUNBUFFERED=1

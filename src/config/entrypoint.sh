@@ -1,15 +1,14 @@
 #!/bin/sh
-
-
-
-
-#!/bin/sh
 set -eu
 
-# Gera os tiles (ajuste o nome do arquivo conforme necessário)
-py3dtiles convert /PointCloud_assets/ept-data/*.laz --out /3dTilesPointCloud --srs_in EPSG:32722 --srs_out EPSG:4978 --color_scale 256
-mv /3dTilesPointCloud/points/tileset.*.json /3dTilesPointCloud/
-chmod 777 -R /3dTilesPointCloud
+# Reprojeta todos os arquivos para EPSG:4978
+for file in /PointCloud_pdal_assets/ept-data/*.laz; do
+  pdal translate "$file" "/PointCloud_py3d_assets/$(basename "$file")" \
+    reprojection --filters.reprojection.out_srs=EPSG:4978 --writers.las.compression=true
+done
 
-nginx -g 'daemon off;'
-mkdir -p "/usr/share/nginx/html"
+py3dtiles convert /PointCloud_py3d_assets/*.laz --out /3dTilesPointCloud --color_scale 256
+mv /3dTilesPointCloud/points/tileset*.json /3dTilesPointCloud/
+chmod 777 -R /3dTilesPointCloud
+chmod 777 -R /PointCloud_pdal_assets
+rm -rf /PointCloud_pdal_assets
