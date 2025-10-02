@@ -27,25 +27,10 @@ viewer.scene.moon.show = false;
 viewer.scene.skyBox.show = false;
 
 const options = {
-    maximumScreenSpaceError: 8,        // menor valor = mais detalhes
-    maximumMemoryUsage: 2048,          // mais ram
-    dynamicScreenSpaceError: true,     // ajusta detalhes conforme zoom
-    dynamicScreenSpaceErrorDensity: 0.002, // densidade para ajuste dinâmico
-    dynamicScreenSpaceErrorFactor: 4.0,    // fator para ajuste dinâmico
-    dynamicScreenSpaceErrorHeightFalloff: 0.25, // suaviza transição de detalhes
-    skipLevelOfDetail: false,          // carrega todos os níveis de detalhe
-    baseScreenSpaceError: 1024,        // erro base para tiles
-    preloadWhenHidden: false,           // precarrega tiles fora de vista
-    preloadFlightDestinations: true,   // precarrega tiles durante animações
-    preferLeaves: true,                // prefere tiles folha para mais detalhes
-    loadSiblings: true,                // carrega tiles irmãos juntos
-    cullWithChildrenBounds: true,      // culling mais eficiente
-    cullRequestsWhileMoving: false,    // não cancela requests durante movimento
-    foveatedScreenSpaceError: true,    // ajusta detalhes conforme foco
-    foveatedConeSize: 0.1,             // tamanho do cone de foco
-    foveatedMinimumScreenSpaceErrorRelaxation: 0.0, // relaxamento mínimo
-    foveatedInterpolationCallback: undefined,       // callback customizado
-    foveatedTimeDelay: 0.2,            // delay para ajuste de foco
+    maximumScreenSpaceError: 48, // Default LOD from slider
+    maximumMemoryUsage: 2048,
+    skipLevelOfDetail: false,
+    preferLeaves: false, 
 }
 
 async function carregarTileset() {
@@ -54,16 +39,80 @@ async function carregarTileset() {
 
         viewer.scene.primitives.add(tileset);
 
-        tileset.pointCloudShading.pointSize = 6.0; // valores entre 2 e 8 para melhor qualidade
+        // --- Configurações Iniciais e Sincronização dos Sliders ---
+        tileset.maximumScreenSpaceError = Number(document.getElementById("lod").value);
+        tileset.pointCloudShading.pointSize = Number(document.getElementById("pointSize").value);
         tileset.pointCloudShading.eyeDomeLighting = true;
-        tileset.pointCloudShading.eyeDomeLightingStrength = 0.8;
-        tileset.pointCloudShading.eyeDomeLightingRadius = 1.5;
+        tileset.pointCloudShading.eyeDomeLightingStrength = Number(document.getElementById("edlStrength").value);
+        tileset.pointCloudShading.eyeDomeLightingRadius = Number(document.getElementById("edlRadius").value);
+        tileset.pointCloudShading.attenuation = true;
+        tileset.pointCloudShading.maximumAttenuation = Number(document.getElementById("maxAttenuation").value);
+
+        // Sincroniza os valores dos spans
+        document.getElementById("lodValue").textContent = tileset.maximumScreenSpaceError;
+        document.getElementById("pointSizeValue").textContent = tileset.pointCloudShading.pointSize;
+        document.getElementById("edlStrengthValue").textContent = tileset.pointCloudShading.eyeDomeLightingStrength;
+        document.getElementById("edlRadiusValue").textContent = tileset.pointCloudShading.eyeDomeLightingRadius;
+        document.getElementById("maxAttenuationValue").textContent = tileset.pointCloudShading.maximumAttenuation;
+
 
         viewer.zoomTo(tileset);
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
         tileset.tileFailed.addEventListener(function (error) {
             console.error("Falha ao carregar tile:", error);
+        });
+
+        // --- Controles de visualização ---
+        const lodInput = document.getElementById("lod");
+        const lodValue = document.getElementById("lodValue");
+        lodInput.addEventListener("input", (e) => {
+            const value = Number(e.target.value);
+            tileset.maximumScreenSpaceError = value;
+            lodValue.textContent = value;
+            viewer.scene.requestRender();
+        });
+
+        const pointSizeInput = document.getElementById("pointSize");
+        const pointSizeValue = document.getElementById("pointSizeValue");
+        pointSizeInput.addEventListener("input", (e) => {
+            const value = Number(e.target.value);
+            tileset.pointCloudShading.pointSize = value;
+            pointSizeValue.textContent = value;
+            viewer.scene.requestRender();
+        });
+
+        const edlStrengthInput = document.getElementById("edlStrength");
+        const edlStrengthValue = document.getElementById("edlStrengthValue");
+        edlStrengthInput.addEventListener("input", (e) => {
+            const value = Number(e.target.value);
+            tileset.pointCloudShading.eyeDomeLightingStrength = value;
+            edlStrengthValue.textContent = value;
+            viewer.scene.requestRender();
+        });
+
+        const edlRadiusInput = document.getElementById("edlRadius");
+        const edlRadiusValue = document.getElementById("edlRadiusValue");
+        edlRadiusInput.addEventListener("input", (e) => {
+            const value = Number(e.target.value);
+            tileset.pointCloudShading.eyeDomeLightingRadius = value;
+            edlRadiusValue.textContent = value;
+            viewer.scene.requestRender();
+        });
+
+        const maxAttenuationInput = document.getElementById("maxAttenuation");
+        const maxAttenuationValue = document.getElementById("maxAttenuationValue");
+        maxAttenuationInput.addEventListener("input", (e) => {
+            const value = Number(e.target.value);
+            tileset.pointCloudShading.maximumAttenuation = value;
+            maxAttenuationValue.textContent = value;
+            viewer.scene.requestRender();
+        });
+
+        const toggleEDLButton = document.getElementById("toggleEDL");
+        toggleEDLButton.addEventListener("click", () => {
+            tileset.pointCloudShading.eyeDomeLighting = !tileset.pointCloudShading.eyeDomeLighting;
+            viewer.scene.requestRender();
         });
 
     } catch (error) {
