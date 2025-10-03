@@ -30,12 +30,12 @@ const options = {
     maximumScreenSpaceError: 48, // Default LOD from slider
     maximumMemoryUsage: 2048,
     skipLevelOfDetail: false,
-    preferLeaves: false, 
+    preferLeaves: false,
 }
 
 async function carregarTileset() {
     try {
-        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8000/3dTilesPointCloud/tileset.json", options);
+        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8989/3dTilesPointCloud/tileset.json", options);
 
         viewer.scene.primitives.add(tileset);
 

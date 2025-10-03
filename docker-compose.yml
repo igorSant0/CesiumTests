@@ -1,16 +1,26 @@
+version: "3.8"
+
 services:
   cesium-viewer:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./src/config
+      dockerfile: Dockerfile.up
     image: cesium-viewer:latest
     ports:
-      - "8000:80"
+      - "8989:80"
     volumes:
-      - ${POINTCLOUD_TILES}:/3dTilesPointCloud
-      - ${POINTCLOUD_PY3D_ASSETS}:/PointCloud_py3d_assets
-      - ./src/config/nginx.conf:/etc/nginx/nginx.conf
-      - ./src/page:/usr/share/nginx/html
-    environment:
-      - NGINX_PORT=80
+      - ./src/page:/usr/share/nginx/html/app/
+      - ${POINTCLOUD_ASSETS_PATH}:/usr/share/nginx/html/assets
+      - ${TILES_PATH}:/usr/share/nginx/html/3dTilesPointCloud
+      - ${TEXTURE_TILES_PATH}:/usr/share/nginx/html/3dTilesTexturing
+    command: >
+      /bin/sh -c "find /usr/share/nginx/html/ -mindepth 1 -maxdepth 1 \
+      ! -name '3dTilesTexturing' \
+      ! -name 'app' \
+      ! -name 'assets' \
+      ! -name '3dTilesPointCloud' \
+      -exec rm -rf {} +; \
+      exec nginx -g 'daemon off;'"
     restart: unless-stopped
+    stdin_open: true # mantém o STDIN aberto (permite entrada)
+    tty: true # aloca um pseudo-TTY (essencial para a barra de progresso)

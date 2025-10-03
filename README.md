@@ -35,7 +35,7 @@ e depois para servir, só executar `docker compose up --build`
 
 A aplicação ficará disponível em:
 
-👉 [http://localhost:8000/page](http://localhost:8000/page)
+👉 [http://localhost:8989/app](http://localhost:8989/app)
 
 ---
 

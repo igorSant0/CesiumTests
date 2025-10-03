@@ -8,7 +8,7 @@ from lazExtractor import LAZExtractor
 
 class TileGeneratorQuality:
     def __init__(self, max_points_per_tile: int = 30000, max_levels: int = 6):
-        self.output_dir = Path("../3dTilesPointCloud/")
+        self.output_dir = Path("/3dTiles")
         self.max_points_per_tile = max_points_per_tile
         self.max_levels = max_levels
         self.tile_counter = 0
