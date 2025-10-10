@@ -9,6 +9,8 @@ services:
     volumes:
       - ${POINTCLOUD_TILES}:/3dTilesPointCloud
       - ${POINTCLOUD_PY3D_ASSETS}:/PointCloud_py3d_assets
+      - ${SEGMENTATION_ASSETS}:/segmentation
+
       - ./src/config/nginx.conf:/etc/nginx/nginx.conf
       - ./src/page:/usr/share/nginx/html
     environment:

@@ -121,3 +121,43 @@ async function carregarTileset() {
 }
 
 carregarTileset()
+
+
+
+async function carregarGeoJSON() {
+
+    try {
+
+        const geoJsonDataSource = await Cesium.GeoJsonDataSource.load("http://localhost:8000/segmentation/mask.geojson", {
+
+            stroke: Cesium.Color.HOTPINK,
+
+            fill: Cesium.Color.PINK.withAlpha(0.5),
+
+            strokeWidth: 3
+
+        });
+
+        await viewer.dataSources.add(geoJsonDataSource);
+
+        const entities = geoJsonDataSource.entities.values;
+
+        for (let i = 0; i < entities.length; i++) {
+
+            const entity = entities[i];
+
+            entity.polygon.classificationType = Cesium.ClassificationType.BOTH;
+
+        }
+
+    } catch (error) {
+
+        console.error("Erro ao carregar o GeoJSON:", error);
+
+    }
+
+}
+
+
+
+carregarGeoJSON();
