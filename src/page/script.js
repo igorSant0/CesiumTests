@@ -30,7 +30,7 @@ const options = {
     maximumScreenSpaceError: 48, // Default LOD from slider
     maximumMemoryUsage: 2048,
     skipLevelOfDetail: false,
-    preferLeaves: false, 
+    preferLeaves: false,
 }
 
 async function carregarTileset() {
@@ -120,44 +120,93 @@ async function carregarTileset() {
     }
 }
 
-carregarTileset()
-
-
 
 async function carregarGeoJSON() {
-
     try {
+        const response = await fetch("http://localhost:8000/segmentation/mask.geojson");
+        const geojson = await response.json();
 
-        const geoJsonDataSource = await Cesium.GeoJsonDataSource.load("http://localhost:8000/segmentation/mask.geojson", {
+        for (const feature of geojson.features) {
+            if (!feature.geometry || !feature.geometry.coordinates) {
+                continue;
+            }
 
-            stroke: Cesium.Color.HOTPINK,
+            // Handle MultiPolygon and Polygon
+            const polygons = feature.geometry.type === 'MultiPolygon'
+                ? feature.geometry.coordinates
+                : [feature.geometry.coordinates];
 
-            fill: Cesium.Color.PINK.withAlpha(0.5),
+            for (const polygon of polygons) {
+                const coordinates = polygon[0]; // Get the exterior ring
 
-            strokeWidth: 3
+                if (!coordinates || coordinates.length < 3) {
+                    console.warn("GeoJSON feature has a polygon with less than 3 coordinates.");
+                    continue;
+                }
 
-        });
+                // --- The rest of the logic is the same, but inside the loop ---
 
-        await viewer.dataSources.add(geoJsonDataSource);
+                // Calculate center
+                let lon = 0;
+                let lat = 0;
+                coordinates.forEach(coord => {
+                    lon += coord[0];
+                    lat += coord[1];
+                });
+                const centerLon = lon / coordinates.length;
+                const centerLat = lat / coordinates.length;
 
-        const entities = geoJsonDataSource.entities.values;
+                const centerCartesian = Cesium.Cartesian3.fromDegrees(centerLon, centerLat);
+                const clampedCartesian = await viewer.scene.clampToHeight(centerCartesian);
 
-        for (let i = 0; i < entities.length; i++) {
+                let height;
+                if (clampedCartesian) {
+                    const clampedCartographic = Cesium.Cartographic.fromCartesian(clampedCartesian);
+                    height = clampedCartographic.height;
+                    console.log("Determined polygon height:", height);
+                }
 
-            const entity = entities[i];
-
-            entity.polygon.classificationType = Cesium.ClassificationType.BOTH;
-
+                if (clampedCartesian && height !== undefined && height !== null && !isNaN(height)) {
+                    const positionsWithHeight = coordinates.map(coord => 
+                        Cesium.Cartesian3.fromDegrees(coord[0], coord[1], height)
+                    );
+                    const polygonHierarchy = new Cesium.PolygonHierarchy(positionsWithHeight);
+                    
+                    viewer.entities.add({
+                        polygon: {
+                            hierarchy: polygonHierarchy,
+                            material: Cesium.Color.PINK.withAlpha(0.5),
+                            outline: true,
+                            outlineColor: Cesium.Color.HOTPINK,
+                            outlineWidth: 3
+                        }
+                    });
+                } else {
+                    console.warn("Could not determine a valid height for a polygon. Clamping to ground.");
+                    const positions = Cesium.Cartesian3.fromDegreesArray(coordinates.flat());
+                    const polygonHierarchy = new Cesium.PolygonHierarchy(positions);
+                    
+                    viewer.entities.add({
+                        polygon: {
+                            hierarchy: polygonHierarchy,
+                            material: Cesium.Color.PINK.withAlpha(0.5),
+                            outline: true,
+                            outlineColor: Cesium.Color.HOTPINK,
+                            outlineWidth: 3,
+                            clampToGround: true
+                        }
+                    });
+                }
+            }
         }
-
     } catch (error) {
-
         console.error("Erro ao carregar o GeoJSON:", error);
-
     }
-
 }
 
+async function load() {
+    await carregarTileset();
+    await carregarGeoJSON();
+}
 
-
-carregarGeoJSON();
+load();
