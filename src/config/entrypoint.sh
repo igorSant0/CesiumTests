@@ -31,7 +31,10 @@ if [ "$1" = "$OUTPUT_DIR/*.laz" ]; then
 fi
 
 py3dtiles convert "$OUTPUT_DIR"/*.laz --out /3dTilesPointCloud --color_scale 256
-mv /3dTilesPointCloud/points/tileset*.json /3dTilesPointCloud/ 2>/dev/null || true
+
+# Move os tilesets numerados para dentro da pasta points/
+mv /3dTilesPointCloud/tileset.*.json /3dTilesPointCloud/points/ 2>/dev/null || true
+
 chmod 777 -R /3dTilesPointCloud
 chmod 777 -R /PointCloud_py3d_assets || true
 rm -rf /PointCloud_py3d_assets || true

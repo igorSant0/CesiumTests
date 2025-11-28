@@ -2,8 +2,9 @@ Cesium.RequestScheduler.maximumRequestsPerServer = 8;
 Cesium.RequestScheduler.throttleRequests = true;
 
 const token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5M2M3MTk2MC1jY2JhLTRkNmYtYmNlZC03NzRjNTIxNmMxMmEiLCJpZCI6MzM3MjMwLCJpYXQiOjE3NTY4MTc4MTJ9.anLO7mF-4WBQt_M1t6w97sTS10Cl1zmRi6_4zQyj2rw";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0ZjM0MjE0Yi03OTRjLTRmMGMtOWVmZS1mMGE5YTg0MTkxZDYiLCJpZCI6MzM3MjMwLCJpYXQiOjE3NjQzMzg1NDV9.8eFlv1nIAVwIpwakTuuDBdd9nQYlkedHyCAfpyN3heM";
 
+Cesium.Ion.defaultAccessToken = token;
 const viewer = new Cesium.Viewer("cesiumContainer", {
     baseLayerPicker: false,
     terrain: Cesium.Terrain.fromWorldTerrain(),
@@ -16,7 +17,7 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     animation: true,
     vrButton: false,
     fullscreenButton: false,
-    requestRenderMode: true,
+    requestRenderMode: false,
     maximumRenderTimeChange: Infinity,
 });
 
@@ -26,9 +27,11 @@ viewer.scene.skyAtmosphere.show = false;
 viewer.scene.sun.show = false;
 viewer.scene.moon.show = false;
 viewer.scene.skyBox.show = false;
+viewer.scene.globe.show = true;
+viewer.scene.globe.depthTestAgainstTerrain = false;
 
 const options = {
-    maximumScreenSpaceError: 48, // Default LOD from slider
+    maximumScreenSpaceError: 48,
     maximumMemoryUsage: 2048,
     skipLevelOfDetail: false,
     preferLeaves: false,
@@ -43,49 +46,32 @@ async function carregarTileset() {
 
         viewer.scene.primitives.add(tileset);
 
-        // --- Configurações Iniciais e Sincronização dos Sliders ---
+        // Configurações Iniciais e Sincronização dos Sliders
         tileset.maximumScreenSpaceError = Number(document.getElementById("lod").value);
-        tileset.pointCloudShading.pointSize = Number(document.getElementById("pointSize").value);
+        tileset.pointCloudShading.pointSize = 3; // Aumenta o tamanho dos pontos
         tileset.pointCloudShading.eyeDomeLighting = true;
         tileset.pointCloudShading.eyeDomeLightingStrength = Number(document.getElementById("edlStrength").value);
         tileset.pointCloudShading.eyeDomeLightingRadius = Number(document.getElementById("edlRadius").value);
         tileset.pointCloudShading.attenuation = true;
         tileset.pointCloudShading.maximumAttenuation = Number(document.getElementById("maxAttenuation").value);
 
-        // Sincroniza os valores dos spans
         document.getElementById("lodValue").textContent = tileset.maximumScreenSpaceError;
         document.getElementById("pointSizeValue").textContent = tileset.pointCloudShading.pointSize;
         document.getElementById("edlStrengthValue").textContent = tileset.pointCloudShading.eyeDomeLightingStrength;
         document.getElementById("edlRadiusValue").textContent = tileset.pointCloudShading.eyeDomeLightingRadius;
         document.getElementById("maxAttenuationValue").textContent = tileset.pointCloudShading.maximumAttenuation;
 
-        const lat = -23.546117;
-        const lon = -51.19281;
-        const hight = 700;
-        //viewer.zoomTo(tileset);
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lon, lat, hight),
-            orientation: {
-                heading: Cesium.Math.toRadians(0),
-                pitch: Cesium.Math.toRadians(-35),
-                roll: 0,
-            },
-            duration: 1.2,
-        });
+        viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-35), 500));
+
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
-        tileset.tileFailed.addEventListener(function (error) {
-            console.error("Falha ao carregar tile:", error);
-        });
-
-        // --- Controles de visualização ---
+        // Controles de visualização
         const lodInput = document.getElementById("lod");
         const lodValue = document.getElementById("lodValue");
         lodInput.addEventListener("input", (e) => {
             const value = Number(e.target.value);
             tileset.maximumScreenSpaceError = value;
             lodValue.textContent = value;
-            viewer.scene.requestRender();
         });
 
         const pointSizeInput = document.getElementById("pointSize");
@@ -94,7 +80,6 @@ async function carregarTileset() {
             const value = Number(e.target.value);
             tileset.pointCloudShading.pointSize = value;
             pointSizeValue.textContent = value;
-            viewer.scene.requestRender();
         });
 
         const edlStrengthInput = document.getElementById("edlStrength");
@@ -103,7 +88,6 @@ async function carregarTileset() {
             const value = Number(e.target.value);
             tileset.pointCloudShading.eyeDomeLightingStrength = value;
             edlStrengthValue.textContent = value;
-            viewer.scene.requestRender();
         });
 
         const edlRadiusInput = document.getElementById("edlRadius");
@@ -112,7 +96,6 @@ async function carregarTileset() {
             const value = Number(e.target.value);
             tileset.pointCloudShading.eyeDomeLightingRadius = value;
             edlRadiusValue.textContent = value;
-            viewer.scene.requestRender();
         });
 
         const maxAttenuationInput = document.getElementById("maxAttenuation");
@@ -121,13 +104,11 @@ async function carregarTileset() {
             const value = Number(e.target.value);
             tileset.pointCloudShading.maximumAttenuation = value;
             maxAttenuationValue.textContent = value;
-            viewer.scene.requestRender();
         });
 
         const toggleEDLButton = document.getElementById("toggleEDL");
         toggleEDLButton.addEventListener("click", () => {
             tileset.pointCloudShading.eyeDomeLighting = !tileset.pointCloudShading.eyeDomeLighting;
-            viewer.scene.requestRender();
         });
     } catch (error) {
         console.error("Erro ao carregar o tileset:", error);
