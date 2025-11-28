@@ -1,9 +1,10 @@
 FROM pdal/pdal:latest
 
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip nginx && \
-    pip3 install --upgrade pip && \
-    pip3 install py3dtiles laspy[laszip]
+RUN conda install -n pdal python=3.13 -y && \
+    apt-get update && \
+    apt-get install -y build-essential nginx && \
+    conda run -n pdal pip install --upgrade pip && \
+    conda run -n pdal pip install py3dtiles laspy[laszip]
 
 WORKDIR /app
 

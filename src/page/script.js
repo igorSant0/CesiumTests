@@ -1,7 +1,8 @@
 Cesium.RequestScheduler.maximumRequestsPerServer = 8;
 Cesium.RequestScheduler.throttleRequests = true;
 
-const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5M2M3MTk2MC1jY2JhLTRkNmYtYmNlZC03NzRjNTIxNmMxMmEiLCJpZCI6MzM3MjMwLCJpYXQiOjE3NTY4MTc4MTJ9.anLO7mF-4WBQt_M1t6w97sTS10Cl1zmRi6_4zQyj2rw";
+const token =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5M2M3MTk2MC1jY2JhLTRkNmYtYmNlZC03NzRjNTIxNmMxMmEiLCJpZCI6MzM3MjMwLCJpYXQiOjE3NTY4MTc4MTJ9.anLO7mF-4WBQt_M1t6w97sTS10Cl1zmRi6_4zQyj2rw";
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
     baseLayerPicker: false,
@@ -30,12 +31,15 @@ const options = {
     maximumScreenSpaceError: 48, // Default LOD from slider
     maximumMemoryUsage: 2048,
     skipLevelOfDetail: false,
-    preferLeaves: false, 
-}
+    preferLeaves: false,
+};
 
 async function carregarTileset() {
     try {
-        const tileset = await Cesium.Cesium3DTileset.fromUrl("http://localhost:8000/3dTilesPointCloud/tileset.json", options);
+        const tileset = await Cesium.Cesium3DTileset.fromUrl(
+            "http://localhost:8000/3dTilesPointCloud/tileset.json",
+            options
+        );
 
         viewer.scene.primitives.add(tileset);
 
@@ -55,8 +59,19 @@ async function carregarTileset() {
         document.getElementById("edlRadiusValue").textContent = tileset.pointCloudShading.eyeDomeLightingRadius;
         document.getElementById("maxAttenuationValue").textContent = tileset.pointCloudShading.maximumAttenuation;
 
-
-        viewer.zoomTo(tileset);
+        const lat = -23.546117;
+        const lon = -51.19281;
+        const hight = 700;
+        //viewer.zoomTo(tileset);
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, hight),
+            orientation: {
+                heading: Cesium.Math.toRadians(0),
+                pitch: Cesium.Math.toRadians(-35),
+                roll: 0,
+            },
+            duration: 1.2,
+        });
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
         tileset.tileFailed.addEventListener(function (error) {
@@ -114,10 +129,9 @@ async function carregarTileset() {
             tileset.pointCloudShading.eyeDomeLighting = !tileset.pointCloudShading.eyeDomeLighting;
             viewer.scene.requestRender();
         });
-
     } catch (error) {
         console.error("Erro ao carregar o tileset:", error);
     }
 }
 
-carregarTileset()
+carregarTileset();
